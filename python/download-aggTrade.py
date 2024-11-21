@@ -57,8 +57,8 @@ def download_daily_aggTrades(trading_type, symbols, num_symbols, dates, start_da
   current = 0
   date_range = None
 
-  if start_date and end_date:
-    date_range = start_date + " " + end_date
+  # if start_date and end_date:
+  #   date_range = start_date + " " + end_date
 
   if not start_date:
     start_date = START_DATE
