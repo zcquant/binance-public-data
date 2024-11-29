@@ -10,6 +10,8 @@ def unzip_to_directory(zip_path, extract_to):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         # 将所有内容解压到指定目录
         zip_ref.extractall(extract_to)
+        
+    os.remove(zip_path)  # 解压完成后删除ZIP文件
 
 # 示例使用
 
@@ -19,6 +21,8 @@ for symbol in sorted(os.listdir(path_root)):
     extract_to = f'/opt/binance_public_data/data/futures/um/daily/aggTrades/{symbol}'  # 解压目标文件夹
     os.makedirs(extract_to, exist_ok=True)
     for f_date in sorted(os.listdir(f"{path_root}/{symbol}")):
+        if not f_date.endswith('.zip'):
+            continue
         zip_path = f'{path_root}/{symbol}/{f_date}'  # ZIP文件路径
         print(f"Unzipping {zip_path} to {extract_to}")
         unzip_to_directory(zip_path, extract_to)
