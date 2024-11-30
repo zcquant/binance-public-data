@@ -11,7 +11,7 @@ def unzip_to_directory(zip_path, extract_to):
         # 将所有内容解压到指定目录
         zip_ref.extractall(extract_to)
         
-    os.remove(zip_path)  # 解压完成后删除ZIP文件
+    # os.remove(zip_path)  # 解压完成后删除ZIP文件
 
 # 示例使用
 
