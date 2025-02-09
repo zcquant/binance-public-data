@@ -1,25 +1,61 @@
 import os
 import numpy as np
+import pandas as pd
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import subprocess
 from datetime import datetime, timedelta
 
+
+def get_eligible_symbols(df, start_date, end_date):
+    """
+    获取符合条件的交易对列表
+    
+    参数:
+    df: DataFrame，包含 symbol, availableSince, availableTo 列
+    start_date: str，开始日期，格式 'YYYY-MM-DD'
+    end_date: str，结束日期，格式 'YYYY-MM-DD'
+    
+    返回:
+    list: 符合条件的交易对列表
+    """
+    # 转换日期字符串为 datetime 对象
+    start_date = datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = datetime.strptime(end_date, '%Y-%m-%d')
+    
+    # 计算 start_date 往前推6个月的日期（近似为180天）
+    six_months_before_start = start_date - timedelta(days=180)
+    
+    # 转换 DataFrame 中的日期列为 datetime
+    df['availableSince'] = pd.to_datetime(df['availableSince'])
+    df['availableTo'] = pd.to_datetime(df['availableTo'])
+    
+    # 筛选符合条件的交易对
+    eligible_symbols = df[
+        (df['availableSince'] <= six_months_before_start) &  # 在 start_date 之前至少6个月上线
+        (df['availableTo'] >= end_date)  # 在 end_date 时仍未下线
+    ]['symbol'].tolist()
+    
+    return eligible_symbols
+
+
 # 加载符号列表
-symbols = np.load("/root/workspace/tardis-data/res/symbols-165.npy", allow_pickle=True)
+# symbols = np.load("/root/workspace/tardis-data/res/symbols-165.npy", allow_pickle=True)
+# symbols = pd.read_csv("/root/workspace/tardis-data/res/symbols-162.csv")["symbol"].values
 
 # 定义下载函数
 def download_data(symbol, start_date, end_date, folder, timeout=300):
     """
     下载数据的函数，支持超时机制。
     """
-    if symbol in ["BTCUSDT", "ETHUSDT"]:
-        return f"Skipped {symbol}"
+    # if symbol in ["BTCUSDT", "ETHUSDT"]:
+    #     return f"Skipped {symbol}"
 
     _t = time.time()
     _cmd = [
         "python", "python/download-aggTrade.py",
         "-t", "um",
+        # "-t", "spot",
         "-s", symbol,
         "-startDate", start_date,
         "-endDate", end_date,
@@ -78,12 +114,15 @@ def generate_monthly_intervals(start_date, end_date):
 
 # 主程序
 if __name__ == "__main__":
-    _start_date = "2023-06-01"
-    _end_date = "2024-11-27"
+    _start_date = "2021-12-01"
+    _end_date = "2025-01-27"
     _folder = "/opt/binance_public_data_zip/"
-    max_workers = 6  # 设置并行线程数
+    max_workers = 1  # 设置并行线程数
     timeout = 300  # 每个任务的超时时间（秒）
     retries = 3  # 每个任务的最大重试次数
+    
+    df = pd.read_csv("/root/workspace/tardis-data/res/symbol_list.csv")
+    print(df)
 
     # 生成每月的时间区间
     monthly_intervals = generate_monthly_intervals(_start_date, _end_date)
@@ -91,17 +130,28 @@ if __name__ == "__main__":
     print("Monthly intervals:", monthly_intervals)
 
     _t_total = time.time()
-
+    
     # 按月循环下载
     for start_date, end_date in monthly_intervals:
         print(f"\nDownloading data for period: {start_date} to {end_date}")
-
+        
+        # 获取符合条件的交易对
+        # eligible_symbols = get_eligible_symbols(df, start_date, end_date)
+        # print("Eligible symbols:", eligible_symbols)
+        
+        # eligible_symbols.remove("BTCUSDT")
+        # eligible_symbols.remove("ETHUSDT")
+        
+        eligible_symbols = ["BTCUSDT", "ETHUSDT"]
+        
+        print(start_date, end_date, len(eligible_symbols))
+        
         # 使用线程池并行执行任务
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # 提交所有任务
             futures = {
                 executor.submit(download_data_with_retry, symbol, start_date, end_date, _folder, retries, timeout): symbol
-                for symbol in symbols
+                for symbol in eligible_symbols
             }
 
             # 等待任务完成并获取结果
@@ -112,5 +162,43 @@ if __name__ == "__main__":
                     print(result)
                 except Exception as e:
                     print(f"Symbol: {symbol}, Error: {e}")
+        
+        # break
+
+    # 按月循环下载
+    for _index, (start_date, end_date) in enumerate(monthly_intervals[1:]):
+        print(f"\nDownloading data for period: {start_date} to {end_date}")
+        
+        # 获取符合条件的交易对
+        # eligible_symbols = get_eligible_symbols(df, start_date, end_date)
+        # print("Eligible symbols:", eligible_symbols)
+        
+        # eligible_symbols.remove("BTCUSDT")
+        # eligible_symbols.remove("ETHUSDT")
+        
+        eligible_symbols = ["BTCUSDT", "ETHUSDT"]
+        
+        print(start_date, end_date, len(eligible_symbols))
+        
+        _start_date, _end_date = monthly_intervals[_index]
+        
+        # 使用线程池并行执行任务
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # 提交所有任务
+            futures = {
+                executor.submit(download_data_with_retry, symbol, _start_date, _end_date, _folder, retries, timeout): symbol
+                for symbol in eligible_symbols
+            }
+
+            # 等待任务完成并获取结果
+            for future in as_completed(futures):
+                symbol = futures[future]
+                try:
+                    result = future.result()  # 获取任务结果
+                    print(result)
+                except Exception as e:
+                    print(f"Symbol: {symbol}, Error: {e}")
+        
+        # break
 
     print("\n\nTotal time used", time.time() - _t_total)
