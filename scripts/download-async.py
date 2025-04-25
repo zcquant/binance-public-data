@@ -115,9 +115,9 @@ def generate_monthly_intervals(start_date, end_date):
 # 主程序
 if __name__ == "__main__":
     _start_date = "2021-12-01"
-    _end_date = "2025-01-27"
+    _end_date = "2025-02-14"
     _folder = "/opt/binance_public_data_zip/"
-    max_workers = 1  # 设置并行线程数
+    max_workers = 6  # 设置并行线程数
     timeout = 300  # 每个任务的超时时间（秒）
     retries = 3  # 每个任务的最大重试次数
     
@@ -133,16 +133,19 @@ if __name__ == "__main__":
     
     # 按月循环下载
     for start_date, end_date in monthly_intervals:
+        if start_date < "2025-02-01":
+            continue
+        
         print(f"\nDownloading data for period: {start_date} to {end_date}")
         
         # 获取符合条件的交易对
-        # eligible_symbols = get_eligible_symbols(df, start_date, end_date)
-        # print("Eligible symbols:", eligible_symbols)
+        eligible_symbols = get_eligible_symbols(df, start_date, end_date)
+        print("Eligible symbols:", eligible_symbols)
         
         # eligible_symbols.remove("BTCUSDT")
         # eligible_symbols.remove("ETHUSDT")
         
-        eligible_symbols = ["BTCUSDT", "ETHUSDT"]
+        # eligible_symbols = ["BTCUSDT", "ETHUSDT"]
         
         print(start_date, end_date, len(eligible_symbols))
         
@@ -167,16 +170,19 @@ if __name__ == "__main__":
 
     # 按月循环下载
     for _index, (start_date, end_date) in enumerate(monthly_intervals[1:]):
+        if start_date < "2025-02-01":
+            continue
+        
         print(f"\nDownloading data for period: {start_date} to {end_date}")
         
         # 获取符合条件的交易对
-        # eligible_symbols = get_eligible_symbols(df, start_date, end_date)
-        # print("Eligible symbols:", eligible_symbols)
+        eligible_symbols = get_eligible_symbols(df, start_date, end_date)
+        print("Eligible symbols:", eligible_symbols)
         
         # eligible_symbols.remove("BTCUSDT")
         # eligible_symbols.remove("ETHUSDT")
         
-        eligible_symbols = ["BTCUSDT", "ETHUSDT"]
+        # eligible_symbols = ["BTCUSDT", "ETHUSDT"]
         
         print(start_date, end_date, len(eligible_symbols))
         
